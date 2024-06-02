@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
 
@@ -15,6 +16,7 @@ public class ModeManager : MonoBehaviour
     public Button placementModeButton;
     public Button scalingModeButton;
     public Button throwObjectButton;
+    public Button endGameButton;
 
     public GameObject initialUIPanel;
     public GameObject gameUIPanel;
@@ -56,6 +58,11 @@ public class ModeManager : MonoBehaviour
     public void StartGame()
     {
         ShowGameUI();
+    }
+
+    public void EndGame()
+    {
+        SceneManager.LoadScene("MainMenuScene");
     }
 
     public void EnablePlacementMode()
@@ -124,12 +131,15 @@ public class ModeManager : MonoBehaviour
 public class ThrowableSphere : MonoBehaviour
 {
     public ModeManager modeManager;
+    private bool hasCollided = false; // Flag to ensure single collision handling
 
     void OnCollisionEnter(Collision collision)
     {
-        if (collision.gameObject.CompareTag("PlacedObject"))
+        if (!hasCollided && collision.gameObject.CompareTag("PlacedObject"))
         {
+            hasCollided = true; // Set the flag to true
             modeManager.IncrementScore();
+            // Destroy(gameObject);
         }
     }
 }

@@ -18,22 +18,36 @@ public class PlaceObject : MonoBehaviour
 
     void Update()
     {
-        if (isPlacementEnabled && Input.touchCount > 0)
+        if (isPlacementEnabled)
         {
-            Touch touch = Input.GetTouch(0);
-
-            if (touch.phase == TouchPhase.Began)
+            #if UNITY_EDITOR // Check if running in the Unity Editor
+            if (Input.GetMouseButtonDown(0)) // Left mouse button click
             {
-                touchPosition = touch.position;
-
-                if (arRaycastManager.Raycast(touchPosition, hits, TrackableType.PlaneWithinPolygon))
+                touchPosition = Input.mousePosition;
+                TryPlaceObject();
+            }
+            #else
+            if (Input.touchCount > 0)
+            {
+                Touch touch = Input.GetTouch(0);
+                if (touch.phase == TouchPhase.Began)
                 {
-                    Pose hitPose = hits[0].pose;
-                    GameObject placedObject = Instantiate(placementIndicatorPrefab, hitPose.position, hitPose.rotation);
-                    placedObject.tag = "PlacedObject"; // Tag the placed object
-                    EnsureRigidbodyAndCollider(placedObject);
+                    touchPosition = touch.position;
+                    TryPlaceObject();
                 }
             }
+            #endif
+        }
+    }
+
+    private void TryPlaceObject()
+    {
+        if (arRaycastManager.Raycast(touchPosition, hits, TrackableType.PlaneWithinPolygon))
+        {
+            Pose hitPose = hits[0].pose;
+            GameObject placedObject = Instantiate(placementIndicatorPrefab, hitPose.position, hitPose.rotation);
+            placedObject.tag = "PlacedObject"; // Tag the placed object
+            EnsureRigidbodyAndCollider(placedObject);
         }
     }
 

@@ -11,6 +11,25 @@ public class ScaleObject : MonoBehaviour
 
     void Update()
     {
+        #if UNITY_EDITOR // Check if running in the Unity Editor
+        if (isScalingEnabled && Input.GetMouseButtonDown(0)) // Left mouse button click to select object
+        {
+            selectedObject = GetTouchedObject(Input.mousePosition);
+            if (selectedObject != null)
+            {
+                initialScale = selectedObject.transform.localScale;
+            }
+        }
+
+        if (isScalingEnabled && Input.mouseScrollDelta.y != 0) // Mouse wheel input
+        {
+            if (selectedObject != null)
+            {
+                float scaleFactor = 1 + Input.mouseScrollDelta.y * 0.1f; // Adjust scaling sensitivity
+                selectedObject.transform.localScale = initialScale * scaleFactor;
+            }
+        }
+        #else
         if (isScalingEnabled && Input.touchCount == 2)
         {
             Touch touchZero = Input.GetTouch(0);
@@ -33,6 +52,7 @@ public class ScaleObject : MonoBehaviour
                 selectedObject.transform.localScale = initialScale * scaleFactor;
             }
         }
+            #endif
     }
 
     private GameObject GetTouchedObject(Vector2 touchPosition)
