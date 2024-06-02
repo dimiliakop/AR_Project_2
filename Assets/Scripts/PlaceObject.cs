@@ -29,9 +29,27 @@ public class PlaceObject : MonoBehaviour
                 if (arRaycastManager.Raycast(touchPosition, hits, TrackableType.PlaneWithinPolygon))
                 {
                     Pose hitPose = hits[0].pose;
-                    Instantiate(placementIndicatorPrefab, hitPose.position, hitPose.rotation);
+                    GameObject placedObject = Instantiate(placementIndicatorPrefab, hitPose.position, hitPose.rotation);
+                    placedObject.tag = "PlacedObject"; // Tag the placed object
+                    EnsureRigidbodyAndCollider(placedObject);
                 }
             }
+        }
+    }
+
+    private void EnsureRigidbodyAndCollider(GameObject obj)
+    {
+        Rigidbody rb = obj.GetComponent<Rigidbody>();
+        if (rb == null)
+        {
+            rb = obj.AddComponent<Rigidbody>();
+        }
+        rb.isKinematic = true; // Make Rigidbody kinematic
+        rb.useGravity = false; // Ensure gravity is disabled
+
+        if (obj.GetComponent<Collider>() == null)
+        {
+            obj.AddComponent<BoxCollider>(); // Add a default BoxCollider if none exists
         }
     }
 }
