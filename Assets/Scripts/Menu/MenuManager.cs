@@ -12,4 +12,9 @@ public class MenuManager : MonoBehaviour
     {
         SceneManager.LoadScene("CloudAnchorsScene"); 
     }
+
+    public void LoadFaceMaskingScene()
+    {
+        SceneManager.LoadScene("FaceMaskingScene");
+    }
 }

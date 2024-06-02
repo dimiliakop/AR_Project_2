@@ -11,6 +11,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/GameScene.unity
     guid: 9fc0d4010bbf28b4594072e72b8655ab
+  - enabled: 1
+    path: Assets/Scenes/FaceMaskingScene.unity
+    guid: 36f131ce5e6e64f4f96c5f428912604c
   m_configObjects:
     UnityEditor.XR.ARCore.ARCoreSettings: {fileID: 11400000, guid: 711522894b7f6db45a3526641ed155dd, type: 2}
     com.unity.xr.arfoundation.simulation_settings: {fileID: 11400000, guid: 546610024926b4f4da5046e7f014e9d6, type: 2}
