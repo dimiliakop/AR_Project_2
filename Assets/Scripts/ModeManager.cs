@@ -102,6 +102,10 @@ public class ModeManager : MonoBehaviour
     {
         initialUIPanel.SetActive(false);
         gameUIPanel.SetActive(true);
+        SetPlaneVisualization(false); // Hide existing planes
+        objectScaler.isScalingEnabled = false;
+        objectPlacement.isPlacementEnabled = false;
+
     }
 
     private void UpdateScoreText()

@@ -47,9 +47,35 @@ public class PlaceObject : MonoBehaviour
             Pose hitPose = hits[0].pose;
             GameObject placedObject = Instantiate(placementIndicatorPrefab, hitPose.position, hitPose.rotation);
             placedObject.tag = "PlacedObject"; // Tag the placed object
+
+            // Adjust the position to place the object on the plane
+            AdjustObjectPosition(placedObject, hitPose.position);
+
             EnsureRigidbodyAndCollider(placedObject);
         }
     }
+
+    private void AdjustObjectPosition(GameObject obj, Vector3 planePosition)
+    {
+        // Get the object's collider to determine its bounds
+        Collider objCollider = obj.GetComponent<Collider>();
+
+        if (objCollider != null)
+        {
+            // Calculate the adjustment needed to place the object on the plane
+            float objectHeight = objCollider.bounds.size.y;
+            Vector3 adjustedPosition = planePosition;
+            adjustedPosition.y += objectHeight / 2;
+
+            // Apply the adjusted position
+            obj.transform.position = adjustedPosition;
+        }
+        else
+        {
+            Debug.LogWarning("No Collider found on the placed object. Unable to adjust position.");
+        }
+    }
+
 
     private void EnsureRigidbodyAndCollider(GameObject obj)
     {
