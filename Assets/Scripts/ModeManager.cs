@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -31,6 +30,7 @@ public class ModeManager : MonoBehaviour
 
     private Color enabledColor = Color.green;
     private Color disabledColor = Color.gray;
+    public Text objectCountText; // UI Text element to display the object count
 
     void Start()
     {
@@ -97,15 +97,48 @@ public class ModeManager : MonoBehaviour
         }
     }
 
-
     private void ShowGameUI()
     {
         initialUIPanel.SetActive(false);
         gameUIPanel.SetActive(true);
-        SetPlaneVisualization(true); // Hide existing planes
+        SetPlaneVisualization(true); // Show existing planes
         objectScaler.isScalingEnabled = false;
         objectPlacement.isPlacementEnabled = false;
 
+        // Get the list of placed objects and their plane positions
+        List<PlacedObjectData> placedObjects = objectPlacement.GetPlacedObjects();
+
+        // Print the number of placed objects
+        Debug.Log($"Number of placed objects: {placedObjects.Count}");
+
+        // Adjust the position of each placed object to ensure it's on top of the plane
+        foreach (var placedObjectData in placedObjects)
+        {
+            AdjustObjectPosition(placedObjectData.placedObject, placedObjectData.planePosition);
+        }
+
+        objectCountText.text = $"{placedObjects.Count}";
+    }
+
+    private void AdjustObjectPosition(GameObject obj, Vector3 planePosition)
+    {
+        // Get the object's collider to determine its bounds
+        Collider objCollider = obj.GetComponent<Collider>();
+
+        if (objCollider != null)
+        {
+            // Calculate the adjustment needed to place the object on the plane
+            float objectHeight = objCollider.bounds.extents.y;
+            Vector3 adjustedPosition = planePosition;
+            adjustedPosition.y += objectHeight;
+
+            // Apply the adjusted position
+            obj.transform.position = adjustedPosition;
+        }
+        else
+        {
+            Debug.LogWarning("No Collider found on the placed object. Unable to adjust position.");
+        }
     }
 
     private void UpdateScoreText()

@@ -8,6 +8,7 @@ public class LightEstimation : MonoBehaviour
     private Light arLight;
     public ARCameraManager arCameraManager;
 
+
     void Awake()
     {
         arLight = GetComponent<Light>();

@@ -6,14 +6,36 @@ using UnityEngine.XR.ARSubsystems;
 public class PlaceObject : MonoBehaviour
 {
     public GameObject placementIndicatorPrefab; // The prefab to be placed
-    private ARRaycastManager arRaycastManager; // AR Raycast Manager
+    public ARRaycastManager arRaycastManager; // AR Raycast Manager
+    public ARPlaneManager arPlaneManager; // AR Plane Manager
+
     private Vector2 touchPosition; // Touch position
     private List<ARRaycastHit> hits = new List<ARRaycastHit>(); // List to store raycast hits
     public bool isPlacementEnabled = true; // Toggle for enabling/disabling placement
 
+    private List<PlacedObjectData> placedObjects = new List<PlacedObjectData>(); // List to store placed objects and their plane positions
+
     void Start()
     {
-        arRaycastManager = FindObjectOfType<ARRaycastManager>();
+        if (arRaycastManager == null)
+        {
+            arRaycastManager = FindObjectOfType<ARRaycastManager>();
+        }
+
+        if (arPlaneManager == null)
+        {
+            arPlaneManager = FindObjectOfType<ARPlaneManager>();
+        }
+
+        // Enable plane detection and visualization
+        if (arPlaneManager != null)
+        {
+            arPlaneManager.enabled = true;
+            foreach (var plane in arPlaneManager.trackables)
+            {
+                plane.gameObject.SetActive(true);
+            }
+        }
     }
 
     void Update()
@@ -48,6 +70,9 @@ public class PlaceObject : MonoBehaviour
             GameObject placedObject = Instantiate(placementIndicatorPrefab, hitPose.position, hitPose.rotation);
             placedObject.tag = "PlacedObject"; // Tag the placed object
 
+            // Store the placed object and its plane position
+            placedObjects.Add(new PlacedObjectData(placedObject, hitPose.position));
+
             // Adjust the position to place the object on the plane
             AdjustObjectPosition(placedObject, hitPose.position);
 
@@ -63,9 +88,9 @@ public class PlaceObject : MonoBehaviour
         if (objCollider != null)
         {
             // Calculate the adjustment needed to place the object on the plane
-            float objectHeight = objCollider.bounds.size.y;
+            float objectHeight = objCollider.bounds.extents.y; // Use extents for half height
             Vector3 adjustedPosition = planePosition;
-            adjustedPosition.y += objectHeight / 2;
+            adjustedPosition.y += objectHeight;
 
             // Apply the adjusted position
             obj.transform.position = adjustedPosition;
@@ -75,7 +100,6 @@ public class PlaceObject : MonoBehaviour
             Debug.LogWarning("No Collider found on the placed object. Unable to adjust position.");
         }
     }
-
 
     private void EnsureRigidbodyAndCollider(GameObject obj)
     {
@@ -91,5 +115,25 @@ public class PlaceObject : MonoBehaviour
         {
             obj.AddComponent<BoxCollider>(); // Add a default BoxCollider if none exists
         }
+    }
+
+    // Method to get the list of placed objects and their plane positions
+    public List<PlacedObjectData> GetPlacedObjects()
+    {
+        return placedObjects;
+    }
+}
+
+// Class to store placed object and its corresponding plane position
+[System.Serializable]
+public class PlacedObjectData
+{
+    public GameObject placedObject;
+    public Vector3 planePosition;
+
+    public PlacedObjectData(GameObject placedObject, Vector3 planePosition)
+    {
+        this.placedObject = placedObject;
+        this.planePosition = planePosition;
     }
 }
