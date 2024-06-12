@@ -6,12 +6,11 @@ using UnityEngine.Rendering;
 public class LightEstimation : MonoBehaviour
 {
     private Light arLight;
-    private ARCameraManager arCameraManager;
+    public ARCameraManager arCameraManager;
 
     void Awake()
     {
         arLight = GetComponent<Light>();
-        arCameraManager = FindObjectOfType<ARCameraManager>();
     }
 
     void OnEnable()
