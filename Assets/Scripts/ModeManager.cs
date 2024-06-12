@@ -30,7 +30,7 @@ public class ModeManager : MonoBehaviour
 
     private Color enabledColor = Color.green;
     private Color disabledColor = Color.gray;
-    public Text objectCountText; // UI Text element to display the object count
+    //public Text objectCountText; // UI Text element to display the object count
 
     void Start()
     {
@@ -57,6 +57,13 @@ public class ModeManager : MonoBehaviour
 
     public void StartGame()
     {
+        // Check if there are any placed objects
+        if (objectPlacement.GetPlacedObjects().Count == 0)
+        {
+            Debug.LogWarning("Cannot start the game with 0 placed objects.");
+            return; // Don't start the game
+        }
+
         ShowGameUI();
     }
 
@@ -117,7 +124,7 @@ public class ModeManager : MonoBehaviour
             AdjustObjectPosition(placedObjectData.placedObject, placedObjectData.planePosition);
         }
 
-        objectCountText.text = $"{placedObjects.Count}";
+        //objectCountText.text = $"{placedObjects.Count}";
     }
 
     private void AdjustObjectPosition(GameObject obj, Vector3 planePosition)
