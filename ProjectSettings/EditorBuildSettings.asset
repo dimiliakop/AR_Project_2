@@ -14,7 +14,14 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/FaceMaskingScene.unity
     guid: 36f131ce5e6e64f4f96c5f428912604c
+  - enabled: 1
+    path: Assets/Scenes/CloudAnchorsScene.unity
+    guid: fc8570b3e75878e488d4b0811c8bc298
+  - enabled: 1
+    path: Assets/Scenes/CloudAnchorResolverScene.unity
+    guid: 66d51743dc8fe2d4c99a2ed98da13a0d
   m_configObjects:
     UnityEditor.XR.ARCore.ARCoreSettings: {fileID: 11400000, guid: 711522894b7f6db45a3526641ed155dd, type: 2}
+    UnityEditor.XR.ARKit.ARKitSettings: {fileID: 11400000, guid: 8c0b81f30bc990d4b8b0980f4fc59916, type: 2}
     com.unity.xr.arfoundation.simulation_settings: {fileID: 11400000, guid: 546610024926b4f4da5046e7f014e9d6, type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: cb73fc4b15269d74f8c793f432f25eb9, type: 2}
