@@ -887,7 +887,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 728ad7fae8e460a4ba41265c7308d757, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_AnchorPrefab: {fileID: 0}
+  m_AnchorPrefab: {fileID: 2375915748266987478, guid: d12e31bde45e6cd468160227d3ebc827, type: 3}
 --- !u!1 &996457370
 GameObject:
   m_ObjectHideFlags: 0
@@ -1066,7 +1066,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   anchorManager: {fileID: 817349419}
-  anchorPrefab: {fileID: 2375915748266987478, guid: d12e31bde45e6cd468160227d3ebc827, type: 3}
+  anchorPrefab: {fileID: 0}
+  arPlaneManager: {fileID: 817349416}
 --- !u!4 &1262994519
 Transform:
   m_ObjectHideFlags: 0

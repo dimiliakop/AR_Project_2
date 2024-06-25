@@ -3,22 +3,27 @@ using System.Threading.Tasks;
 using UnityEngine;
 using Google.XR.ARCoreExtensions;
 using UnityEngine.XR.ARFoundation;
-using UnityEngine.UI;
+using System.Collections.Generic;
 
 public class CloudAnchorResolver : MonoBehaviour
 {
     public ARAnchorManager anchorManager;
-    public GameObject anchorPrefab; // The prefab to instantiate at the resolved anchor
+    public GameObject anchorPrefab;
+    public ARPlaneManager arPlaneManager;
 
     private ARCloudAnchor resolvedAnchor;
     private string cloudAnchorId;
 
     private void Start()
     {
+        if (arPlaneManager == null)
+        {
+            arPlaneManager = FindObjectOfType<ARPlaneManager>();
+        }
         cloudAnchorId = PlayerPrefs.GetString("LastCloudAnchorID", null);
         if (!string.IsNullOrEmpty(cloudAnchorId))
         {
-            Debug.Log("Cloud Anchor ID found.");
+            Debug.Log("Cloud Anchor ID found: " + cloudAnchorId);
         }
         else
         {
@@ -29,43 +34,45 @@ public class CloudAnchorResolver : MonoBehaviour
     public async void ResolveCloudAnchor()
     {
         Debug.Log("Resolving Cloud Anchor...");
+        if (anchorManager == null)
+        {
+            Debug.LogError("ARAnchorManager is not assigned.");
+            return;
+        }
+
         ResolveCloudAnchorResult result = await ResolveCloudAnchorAsync(cloudAnchorId);
 
         if (result != null && result.CloudAnchorState == CloudAnchorState.Success)
         {
             resolvedAnchor = result.Anchor;
-            Debug.Log("Cloud Anchor resolved successfully.");
             Debug.Log("Cloud Anchor resolved successfully. Pose: " + resolvedAnchor.transform.position);
 
-            // Instantiate the prefab at the resolved anchor's position and rotation
             Instantiate(anchorPrefab, resolvedAnchor.transform.position, resolvedAnchor.transform.rotation);
+            
         }
         else
         {
-            Debug.Log("Failed to resolve Cloud Anchor. Error: " + (result != null ? result.CloudAnchorState.ToString() : "Unknown"));
             Debug.LogError("Failed to resolve Cloud Anchor. Error: " + (result != null ? result.CloudAnchorState.ToString() : "Unknown"));
         }
     }
 
-    private Task<ResolveCloudAnchorResult> ResolveCloudAnchorAsync(string cloudAnchorId)
+    private async Task<ResolveCloudAnchorResult> ResolveCloudAnchorAsync(string cloudAnchorId)
     {
-        var tcs = new TaskCompletionSource<ResolveCloudAnchorResult>();
-        StartCoroutine(ResolveCloudAnchorCoroutine(cloudAnchorId, tcs));
-        return tcs.Task;
-    }
+        Debug.Log("Inside ResolveCloudAnchorAsync...");
+        if (string.IsNullOrEmpty(cloudAnchorId))
+        {
+            Debug.LogError("CloudAnchorId is null or empty.");
+            return null;
+        }
 
-    private IEnumerator ResolveCloudAnchorCoroutine(string cloudAnchorId, TaskCompletionSource<ResolveCloudAnchorResult> tcs)
-    {
         var promise = anchorManager.ResolveCloudAnchorAsync(cloudAnchorId);
-        yield return promise;
 
-        if (promise.State == PromiseState.Done)
+        while (promise.State == PromiseState.Pending)
         {
-            tcs.SetResult(promise.Result);
+            await Task.Yield();
         }
-        else
-        {
-            tcs.SetResult(null);
-        }
+
+        Debug.Log("Promise state: " + promise.State);
+        return promise.Result;
     }
 }

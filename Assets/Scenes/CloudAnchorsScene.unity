@@ -518,6 +518,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   anchorManager: {fileID: 1827334253}
   anchorPlacement: {fileID: 1827334249}
+  arPlaneManager: {fileID: 1827334255}
 --- !u!4 &728843569
 Transform:
   m_ObjectHideFlags: 0

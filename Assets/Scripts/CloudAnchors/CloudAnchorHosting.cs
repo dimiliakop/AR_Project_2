@@ -7,6 +7,15 @@ public class CloudAnchorHosting : MonoBehaviour
 {
     public ARAnchorManager anchorManager;
     public GameObject anchorPlacement;
+    public ARPlaneManager arPlaneManager;
+
+    public void Start()
+    {
+        if (arPlaneManager == null)
+        {
+            arPlaneManager = FindObjectOfType<ARPlaneManager>();
+        }
+    }
 
     public async void HostCloudAnchor()
     {

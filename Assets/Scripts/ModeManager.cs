@@ -1,9 +1,12 @@
+using Google.XR.ARCoreExtensions;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
+
 
 public class ModeManager : MonoBehaviour
 {
@@ -26,11 +29,17 @@ public class ModeManager : MonoBehaviour
     public GameObject throwableSpherePrefab;
     public float throwForce = 10f;
 
-    private int score = 0;
+    private static int ObjectHitScore = 0;
 
     private Color enabledColor = Color.green;
     private Color disabledColor = Color.gray;
     //public Text objectCountText; // UI Text element to display the object count
+
+    public ARAnchorManager anchorManager;
+    public GameObject anchorPrefab;
+
+    private ARCloudAnchor resolvedAnchor;
+    private string cloudAnchorId;
 
     void Start()
     {
@@ -43,10 +52,23 @@ public class ModeManager : MonoBehaviour
         objectPlacement.isPlacementEnabled = false;
         objectScaler.isScalingEnabled = false;
         arPlaneManager.enabled = false;
+        RemoveAllPlanes();
         SetPlaneVisualization(false);
 
         placementModeButton.image.color = disabledColor;
         scalingModeButton.image.color = disabledColor;
+    }
+
+    public void RemoveAllPlanes()
+    {
+        if (arPlaneManager != null)
+        {
+            // Iterate over the tracked planes and destroy their game objects
+            foreach (var plane in arPlaneManager.trackables)
+            {
+                Destroy(plane.gameObject);
+            }
+        }
     }
 
     private void ShowInitialUI()
@@ -57,11 +79,10 @@ public class ModeManager : MonoBehaviour
 
     public void StartGame()
     {
-        // Check if there are any placed objects
         if (objectPlacement.GetPlacedObjects().Count == 0)
         {
             Debug.LogWarning("Cannot start the game with 0 placed objects.");
-            return; // Don't start the game
+            return; 
         }
 
         ShowGameUI();
@@ -77,8 +98,8 @@ public class ModeManager : MonoBehaviour
         objectPlacement.isPlacementEnabled = true;
         objectScaler.isScalingEnabled = false;
 
-        arPlaneManager.enabled = true; // Enable plane detection
-        SetPlaneVisualization(true); // Show existing planes
+        arPlaneManager.enabled = true; 
+        SetPlaneVisualization(true); 
 
         placementModeButton.image.color = enabledColor;
         scalingModeButton.image.color = disabledColor;
@@ -89,8 +110,8 @@ public class ModeManager : MonoBehaviour
         objectPlacement.isPlacementEnabled = false;
         objectScaler.isScalingEnabled = true;
 
-        arPlaneManager.enabled = false; // Disable plane detection
-        SetPlaneVisualization(false); // Hide existing planes
+        arPlaneManager.enabled = false; 
+        SetPlaneVisualization(false); 
 
         placementModeButton.image.color = disabledColor;
         scalingModeButton.image.color = enabledColor;
@@ -106,19 +127,26 @@ public class ModeManager : MonoBehaviour
 
     private void ShowGameUI()
     {
+        cloudAnchorId = PlayerPrefs.GetString("LastCloudAnchorID", null);
+        if (!string.IsNullOrEmpty(cloudAnchorId))
+        {
+            Debug.Log("Cloud Anchor ID found: " + cloudAnchorId);
+        }
+        else
+        {
+            Debug.Log("No Cloud Anchor ID found.");
+        }
+
         initialUIPanel.SetActive(false);
         gameUIPanel.SetActive(true);
         SetPlaneVisualization(true); // Show existing planes
         objectScaler.isScalingEnabled = false;
         objectPlacement.isPlacementEnabled = false;
 
-        // Get the list of placed objects and their plane positions
         List<PlacedObjectData> placedObjects = objectPlacement.GetPlacedObjects();
 
-        // Print the number of placed objects
         Debug.Log($"Number of placed objects: {placedObjects.Count}");
 
-        // Adjust the position of each placed object to ensure it's on top of the plane
         foreach (var placedObjectData in placedObjects)
         {
             AdjustObjectPosition(placedObjectData.placedObject, placedObjectData.planePosition);
@@ -129,17 +157,14 @@ public class ModeManager : MonoBehaviour
 
     private void AdjustObjectPosition(GameObject obj, Vector3 planePosition)
     {
-        // Get the object's collider to determine its bounds
         Collider objCollider = obj.GetComponent<Collider>();
 
         if (objCollider != null)
         {
-            // Calculate the adjustment needed to place the object on the plane
             float objectHeight = objCollider.bounds.extents.y;
             Vector3 adjustedPosition = planePosition;
             adjustedPosition.y += objectHeight;
 
-            // Apply the adjusted position
             obj.transform.position = adjustedPosition;
         }
         else
@@ -148,9 +173,9 @@ public class ModeManager : MonoBehaviour
         }
     }
 
-    private void UpdateScoreText()
+    private void UpdateScoreTextObjectHit()
     {
-        objectHitScoreText.text = $"{score}";
+        objectHitScoreText.text = $"{ObjectHitScore}";
     }
 
     public void ThrowObject()
@@ -158,31 +183,77 @@ public class ModeManager : MonoBehaviour
         Camera arCamera = Camera.main;
         GameObject sphere = Instantiate(throwableSpherePrefab, arCamera.transform.position, arCamera.transform.rotation);
         Rigidbody rb = sphere.GetComponent<Rigidbody>();
-        rb.isKinematic = false; // Ensure the Rigidbody is non-kinematic
+        rb.isKinematic = false; 
         rb.AddForce(arCamera.transform.forward * throwForce, ForceMode.Impulse);
 
         sphere.AddComponent<SphereCollider>();
         sphere.AddComponent<ThrowableSphere>().modeManager = this;
     }
 
-    public void IncrementScore()
+    public async void ResolveCloudAnchor()
     {
-        score++;
-        UpdateScoreText();
+        Debug.Log("Resolving Cloud Anchor...");
+        if (anchorManager == null)
+        {
+            Debug.LogError("ARAnchorManager is not assigned.");
+            return;
+        }
+
+        ResolveCloudAnchorResult result = await ResolveCloudAnchorAsync(cloudAnchorId);
+
+        if (result != null && result.CloudAnchorState == CloudAnchorState.Success)
+        {
+            resolvedAnchor = result.Anchor;
+            Debug.Log("Cloud Anchor resolved successfully. Pose: " + resolvedAnchor.transform.position);
+
+            Instantiate(anchorPrefab, resolvedAnchor.transform.position, resolvedAnchor.transform.rotation);
+        }
+        else
+        {
+            Debug.LogError("Failed to resolve Cloud Anchor. Error: " + (result != null ? result.CloudAnchorState.ToString() : "Unknown"));
+        }
+    }
+
+    private async Task<ResolveCloudAnchorResult> ResolveCloudAnchorAsync(string cloudAnchorId)
+    {
+        Debug.Log("Inside ResolveCloudAnchorAsync...");
+        if (string.IsNullOrEmpty(cloudAnchorId))
+        {
+            Debug.LogError("CloudAnchorId is null or empty.");
+            return null;
+        }
+
+        var promise = anchorManager.ResolveCloudAnchorAsync(cloudAnchorId);
+
+        while (promise.State == PromiseState.Pending)
+        {
+            await Task.Yield();
+        }
+
+        Debug.Log("Promise state: " + promise.State);
+        return promise.Result;
+    }
+
+    public void IncrementScoreObjectHit()
+    {
+        ObjectHitScore++;
+        UpdateScoreTextObjectHit();
     }
 }
+
+
 
 public class ThrowableSphere : MonoBehaviour
 {
     public ModeManager modeManager;
-    private bool hasCollided = false; // Flag to ensure single collision handling
+    private bool hasCollided = false; 
 
     void OnCollisionEnter(Collision collision)
     {
         if (!hasCollided && collision.gameObject.CompareTag("PlacedObject"))
         {
-            hasCollided = true; // Set the flag to true
-            modeManager.IncrementScore();
+            hasCollided = true; 
+            modeManager.IncrementScoreObjectHit();
             // Destroy(gameObject);
         }
     }

@@ -18,7 +18,10 @@ public class LogDisplay : MonoBehaviour
 
     void HandleLog(string logString, string stackTrace, LogType type)
     {
-        logMessages += logString + "\n";
-        errorText.text = logMessages;
+        if (type != LogType.Error && type != LogType.Exception)
+        {
+            logMessages += logString + "\n";
+            errorText.text = logMessages;
+        }
     }
 }
