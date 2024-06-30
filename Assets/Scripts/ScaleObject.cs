@@ -8,29 +8,43 @@ public class ScaleObject : MonoBehaviour
     private GameObject selectedObject;
     private float initialDistance;
     private Vector3 initialScale;
+    private float scaleFactor;
 
     void Update()
     {
+        if (!isScalingEnabled)
+            return;
+
         #if UNITY_EDITOR // Check if running in the Unity Editor
-        if (isScalingEnabled && Input.GetMouseButtonDown(0)) // Left mouse button click to select object
+        HandleMouseScaling();
+        #else
+        HandleTouchScaling();
+        #endif
+    }
+
+    private void HandleMouseScaling()
+    {
+        if (Input.GetMouseButtonDown(0)) // Left mouse button click to select object
         {
             selectedObject = GetTouchedObject(Input.mousePosition);
             if (selectedObject != null)
             {
                 initialScale = selectedObject.transform.localScale;
+                Debug.Log($"Selected object: {selectedObject.name} with initial scale {initialScale}");
             }
         }
 
-        if (isScalingEnabled && Input.mouseScrollDelta.y != 0) // Mouse wheel input
+        if (selectedObject != null && Input.mouseScrollDelta.y != 0) // Mouse wheel input
         {
-            if (selectedObject != null)
-            {
-                float scaleFactor = 1 + Input.mouseScrollDelta.y * 0.1f; // Adjust scaling sensitivity
-                selectedObject.transform.localScale = initialScale * scaleFactor;
-            }
+            scaleFactor = 1 + Input.mouseScrollDelta.y * 0.1f; // Adjust scaling sensitivity
+            selectedObject.transform.localScale = initialScale * scaleFactor;
+            Debug.Log($"Scaling object: {selectedObject.name} to scale {selectedObject.transform.localScale}");
         }
-        #else
-        if (isScalingEnabled && Input.touchCount == 2)
+    }
+
+    private void HandleTouchScaling()
+    {
+        if (Input.touchCount == 2)
         {
             Touch touchZero = Input.GetTouch(0);
             Touch touchOne = Input.GetTouch(1);
@@ -42,17 +56,18 @@ public class ScaleObject : MonoBehaviour
                 {
                     initialDistance = Vector2.Distance(touchZero.position, touchOne.position);
                     initialScale = selectedObject.transform.localScale;
+                    Debug.Log($"Selected object: {selectedObject.name} with initial scale {initialScale} and initial distance {initialDistance}");
                 }
             }
 
             if (selectedObject != null && (touchZero.phase == TouchPhase.Moved || touchOne.phase == TouchPhase.Moved))
             {
                 float currentDistance = Vector2.Distance(touchZero.position, touchOne.position);
-                float scaleFactor = currentDistance / initialDistance;
+                scaleFactor = currentDistance / initialDistance;
                 selectedObject.transform.localScale = initialScale * scaleFactor;
+                Debug.Log($"Scaling object: {selectedObject.name} to scale {selectedObject.transform.localScale}");
             }
         }
-            #endif
     }
 
     private GameObject GetTouchedObject(Vector2 touchPosition)
@@ -61,6 +76,7 @@ public class ScaleObject : MonoBehaviour
         RaycastHit hit;
         if (Physics.Raycast(ray, out hit))
         {
+            Debug.Log($"Touched object: {hit.collider.gameObject.name}");
             return hit.collider.gameObject;
         }
         return null;

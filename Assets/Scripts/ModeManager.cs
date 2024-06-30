@@ -1,4 +1,5 @@
 using Google.XR.ARCoreExtensions;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using TMPro;
@@ -6,7 +7,6 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.XR.ARFoundation;
-
 
 public class ModeManager : MonoBehaviour
 {
@@ -25,15 +25,16 @@ public class ModeManager : MonoBehaviour
 
     public TextMeshProUGUI objectHitScoreText;
     public TextMeshProUGUI imagesHitScoreText;
+    public TextMeshProUGUI winText; // TextMeshProUGUI for the win text
 
     public GameObject throwableSpherePrefab;
+    public GameObject muzzleFlashPrefab; // Muzzle flash effect prefab
     public float throwForce = 10f;
 
     private static int ObjectHitScore = 0;
 
     private Color enabledColor = Color.green;
     private Color disabledColor = Color.gray;
-    //public Text objectCountText; // UI Text element to display the object count
 
     public ARAnchorManager anchorManager;
     public GameObject anchorPrefab;
@@ -41,10 +42,14 @@ public class ModeManager : MonoBehaviour
     private ARCloudAnchor resolvedAnchor;
     private string cloudAnchorId;
 
+    // FallDetection prefab reference
+    public GameObject fallDetectionPrefab;
+
     void Start()
     {
         DisableAllModes();
         ShowInitialUI();
+        winText.gameObject.SetActive(false); // Ensure win text is hidden initially
     }
 
     private void DisableAllModes()
@@ -63,7 +68,6 @@ public class ModeManager : MonoBehaviour
     {
         if (arPlaneManager != null)
         {
-            // Iterate over the tracked planes and destroy their game objects
             foreach (var plane in arPlaneManager.trackables)
             {
                 Destroy(plane.gameObject);
@@ -82,9 +86,10 @@ public class ModeManager : MonoBehaviour
         if (objectPlacement.GetPlacedObjects().Count == 0)
         {
             Debug.LogWarning("Cannot start the game with 0 placed objects.");
-            return; 
+            return;
         }
 
+        AdjustFallDetectionArea();
         ShowGameUI();
     }
 
@@ -98,8 +103,8 @@ public class ModeManager : MonoBehaviour
         objectPlacement.isPlacementEnabled = true;
         objectScaler.isScalingEnabled = false;
 
-        arPlaneManager.enabled = true; 
-        SetPlaneVisualization(true); 
+        arPlaneManager.enabled = true;
+        SetPlaneVisualization(true);
 
         placementModeButton.image.color = enabledColor;
         scalingModeButton.image.color = disabledColor;
@@ -110,8 +115,8 @@ public class ModeManager : MonoBehaviour
         objectPlacement.isPlacementEnabled = false;
         objectScaler.isScalingEnabled = true;
 
-        arPlaneManager.enabled = false; 
-        SetPlaneVisualization(false); 
+        arPlaneManager.enabled = false;
+        SetPlaneVisualization(false);
 
         placementModeButton.image.color = disabledColor;
         scalingModeButton.image.color = enabledColor;
@@ -136,10 +141,11 @@ public class ModeManager : MonoBehaviour
         {
             Debug.Log("No Cloud Anchor ID found.");
         }
+        arPlaneManager.enabled = false;
 
         initialUIPanel.SetActive(false);
         gameUIPanel.SetActive(true);
-        SetPlaneVisualization(true); // Show existing planes
+        SetPlaneVisualization(true);
         objectScaler.isScalingEnabled = false;
         objectPlacement.isPlacementEnabled = false;
 
@@ -151,8 +157,6 @@ public class ModeManager : MonoBehaviour
         {
             AdjustObjectPosition(placedObjectData.placedObject, placedObjectData.planePosition);
         }
-
-        //objectCountText.text = $"{placedObjects.Count}";
     }
 
     private void AdjustObjectPosition(GameObject obj, Vector3 planePosition)
@@ -161,7 +165,7 @@ public class ModeManager : MonoBehaviour
 
         if (objCollider != null)
         {
-            float objectHeight = objCollider.bounds.extents.y;
+            float objectHeight = objCollider.bounds.size.y / 2; // Use size.y / 2 to get the half height
             Vector3 adjustedPosition = planePosition;
             adjustedPosition.y += objectHeight;
 
@@ -183,11 +187,36 @@ public class ModeManager : MonoBehaviour
         Camera arCamera = Camera.main;
         GameObject sphere = Instantiate(throwableSpherePrefab, arCamera.transform.position, arCamera.transform.rotation);
         Rigidbody rb = sphere.GetComponent<Rigidbody>();
-        rb.isKinematic = false; 
+        rb.isKinematic = false;
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic; // Use continuous collision detection
         rb.AddForce(arCamera.transform.forward * throwForce, ForceMode.Impulse);
 
-        sphere.AddComponent<SphereCollider>();
-        sphere.AddComponent<ThrowableSphere>().modeManager = this;
+        // Ensure the sphere has a collider
+        if (sphere.GetComponent<Collider>() == null)
+        {
+            sphere.AddComponent<SphereCollider>();
+        }
+
+        // Ensure the sphere has the ThrowableSphere component
+        ThrowableSphere throwableSphere = sphere.GetComponent<ThrowableSphere>();
+        if (throwableSphere == null)
+        {
+            throwableSphere = sphere.AddComponent<ThrowableSphere>();
+        }
+        throwableSphere.modeManager = this;
+
+        // Play the throw sound
+        AudioSource audioSource = sphere.GetComponent<AudioSource>();
+        if (audioSource != null && audioSource.clip != null)
+        {
+            audioSource.Play();
+        }
+
+        // Instantiate the muzzle flash effect
+        if (muzzleFlashPrefab != null)
+        {
+            Instantiate(muzzleFlashPrefab, arCamera.transform.position, arCamera.transform.rotation);
+        }
     }
 
     public async void ResolveCloudAnchor()
@@ -239,22 +268,141 @@ public class ModeManager : MonoBehaviour
         ObjectHitScore++;
         UpdateScoreTextObjectHit();
     }
+
+    public void CheckForWin()
+    {
+        Debug.Log("Checking for win condition...");
+        List<PlacedObjectData> placedObjects = objectPlacement.GetPlacedObjects();
+        bool anyObjectLeft = false;
+
+        foreach (var placedObjectData in placedObjects)
+        {
+            if (placedObjectData.placedObject != null)
+            {
+                anyObjectLeft = true;
+                Debug.Log($"Object {placedObjectData.placedObject.name} still exists at position {placedObjectData.placedObject.transform.position}");
+            }
+        }
+
+        if (!anyObjectLeft)
+        {
+            winText.text = "You Win!";
+            winText.gameObject.SetActive(true);
+            StartCoroutine(ExitGameAfterDelay(3f));
+        }
+    }
+
+    private IEnumerator ExitGameAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        EndGame();
+    }
+
+    private void AdjustFallDetectionArea()
+    {
+        if (fallDetectionPrefab == null) return;
+
+        // Create FallDetection GameObject if not already present
+        GameObject fallDetectionObject = Instantiate(fallDetectionPrefab);
+        fallDetectionObject.name = "FallDetection";
+
+        Vector3 center = Vector3.zero;
+        float maxX = float.MinValue, minX = float.MaxValue;
+        float maxZ = float.MinValue, minZ = float.MaxValue;
+
+        foreach (var plane in arPlaneManager.trackables)
+        {
+            if (plane == null) continue;
+
+            center += plane.transform.position;
+
+            foreach (Vector3 vertex in plane.boundary)
+            {
+                Vector3 worldVertex = plane.transform.TransformPoint(vertex);
+                if (worldVertex.x > maxX) maxX = worldVertex.x;
+                if (worldVertex.x < minX) minX = worldVertex.x;
+                if (worldVertex.z > maxZ) maxZ = worldVertex.z;
+                if (worldVertex.z < minZ) minZ = worldVertex.z;
+            }
+        }
+
+        center /= arPlaneManager.trackables.count;
+        float sizeX = maxX - minX;
+        float sizeZ = maxZ - minZ;
+
+        fallDetectionObject.transform.position = new Vector3(center.x, center.y - 1f, center.z);
+        fallDetectionObject.transform.localScale = new Vector3(sizeX, 1, sizeZ);
+
+        BoxCollider boxCollider = fallDetectionObject.GetComponent<BoxCollider>();
+        if (boxCollider != null)
+        {
+            boxCollider.isTrigger = true;
+        }
+
+        FallDetection fallDetection = fallDetectionObject.GetComponent<FallDetection>();
+        if (fallDetection != null)
+        {
+            fallDetection.modeManager = this;
+        }
+    }
 }
-
-
-
 public class ThrowableSphere : MonoBehaviour
 {
     public ModeManager modeManager;
-    private bool hasCollided = false; 
+    private bool hasCollided = false;
+    public float collisionEffectForce = 5f;
+    public float destructionDelay = 0.5f;
+
+    public GameObject collisionEffectPrefab;
+    public AudioClip collisionSound;
+    private AudioSource audioSource;
+
+    void Start()
+    {
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+    }
 
     void OnCollisionEnter(Collision collision)
     {
-        if (!hasCollided && collision.gameObject.CompareTag("PlacedObject"))
+        Debug.Log("Collision detected with: " + collision.gameObject.name);
+
+        if (!hasCollided)
         {
-            hasCollided = true; 
-            modeManager.IncrementScoreObjectHit();
-            // Destroy(gameObject);
+            hasCollided = true;
+
+            if (collision.gameObject.CompareTag("PlacedObject"))
+            {
+                modeManager.IncrementScoreObjectHit();
+
+                Rigidbody objectRb = collision.gameObject.GetComponent<Rigidbody>();
+                if (objectRb != null)
+                {
+                    objectRb.isKinematic = false;
+                    objectRb.useGravity = true;
+                    Vector3 forceDirection = collision.contacts[0].point - transform.position;
+                    forceDirection = forceDirection.normalized;
+                    objectRb.AddForce(forceDirection * collisionEffectForce, ForceMode.Impulse);
+                    Debug.Log("Force applied to object: " + forceDirection * collisionEffectForce);
+                }
+            }
+
+            if (collisionEffectPrefab != null)
+            {
+                Instantiate(collisionEffectPrefab, collision.contacts[0].point, Quaternion.identity);
+                Debug.Log("Particle effect instantiated at: " + collision.contacts[0].point);
+            }
+
+            if (collisionSound != null && audioSource != null)
+            {
+                audioSource.PlayOneShot(collisionSound);
+                Debug.Log("Collision sound played: " + collisionSound.name);
+            }
+
+            Destroy(gameObject, destructionDelay);
         }
     }
 }

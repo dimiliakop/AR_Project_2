@@ -70,13 +70,17 @@ public class PlaceObject : MonoBehaviour
             GameObject placedObject = Instantiate(placementIndicatorPrefab, hitPose.position, hitPose.rotation);
             placedObject.tag = "PlacedObject"; // Tag the placed object
 
-            // Store the placed object and its plane position
-            placedObjects.Add(new PlacedObjectData(placedObject, hitPose.position));
+            // Ensure Rigidbody and Collider are properly configured before adjusting position
+            EnsureRigidbodyAndCollider(placedObject);
 
             // Adjust the position to place the object on the plane
             AdjustObjectPosition(placedObject, hitPose.position);
 
-            EnsureRigidbodyAndCollider(placedObject);
+            // Store the placed object and its plane position
+            placedObjects.Add(new PlacedObjectData(placedObject, hitPose.position));
+
+            // Adjust the rotation to face the camera
+            AdjustObjectRotation(placedObject);
         }
     }
 
@@ -87,10 +91,9 @@ public class PlaceObject : MonoBehaviour
 
         if (objCollider != null)
         {
-            // Calculate the adjustment needed to place the object on the plane
-            float objectHeight = objCollider.bounds.extents.y; // Use extents for half height
+            // Adjust the position to place the object exactly on the plane
             Vector3 adjustedPosition = planePosition;
-            adjustedPosition.y += objectHeight;
+            adjustedPosition.y += objCollider.bounds.extents.y; // Move up by half the height of the collider
 
             // Apply the adjusted position
             obj.transform.position = adjustedPosition;
@@ -99,6 +102,15 @@ public class PlaceObject : MonoBehaviour
         {
             Debug.LogWarning("No Collider found on the placed object. Unable to adjust position.");
         }
+    }
+
+    private void AdjustObjectRotation(GameObject obj)
+    {
+        Camera arCamera = Camera.main;
+        Vector3 directionToCamera = arCamera.transform.position - obj.transform.position;
+        directionToCamera.y = 0; // Keep the rotation only on the y-axis
+        Quaternion lookRotation = Quaternion.LookRotation(directionToCamera);
+        obj.transform.rotation = lookRotation;
     }
 
     private void EnsureRigidbodyAndCollider(GameObject obj)
